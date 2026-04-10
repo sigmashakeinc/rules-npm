@@ -1,0 +1,46 @@
+# npm_exec_hygiene.rules — Guard npm publish and registry operations.
+# Technology: npm | Capability: exec
+# Covers: publish, unpublish, deprecate, audit fix force.
+
+rule no-npm-unpublish {
+  enabled true
+  priority 95
+  severity error
+  DENY execution
+  IF command STARTS_WITH "npm unpublish"
+  OR command REGEX "^npm unpublish"
+  MESSAGE "npm unpublish is blocked. Removing published packages breaks anyone depending on that version and cannot be undone after 72 hours. Use 'npm deprecate' to discourage use without removing."
+}
+
+rule ask-npm-publish {
+  enabled true
+  priority 90
+  severity warning
+  ASK execution
+  IF command STARTS_WITH "npm publish"
+  OR command REGEX "^npm publish"
+  MESSAGE "Publishing to npm is permanent (except within 72 hours). Verify the version, build output, and .npmignore before publishing."
+  PROMPT "Have you verified: (1) correct version bump in package.json, (2) clean build output, (3) .npmignore excludes source/test files, (4) correct registry target?"
+}
+
+rule ask-npm-deprecate {
+  enabled true
+  priority 85
+  severity warning
+  ASK execution
+  IF command STARTS_WITH "npm deprecate"
+  OR command REGEX "^npm deprecate"
+  MESSAGE "Deprecating an npm package version affects all users who install or update that version. Confirm the deprecation message is accurate."
+  PROMPT "Is the deprecation message clear and actionable? Users should know why the version is deprecated and what to use instead."
+}
+
+rule ask-audit-fix-force {
+  enabled true
+  priority 85
+  severity warning
+  ASK execution
+  IF command CONTAINS "npm audit fix --force"
+  OR command CONTAINS "npm audit fix -f"
+  MESSAGE "'npm audit fix --force' can install breaking changes by upgrading across major versions. It may break your project in non-obvious ways."
+  PROMPT "Have you reviewed what 'npm audit fix --force' will change? Run 'npm audit fix' first (without --force) to see if a safe fix is available."
+}

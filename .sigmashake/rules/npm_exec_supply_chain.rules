@@ -1,0 +1,35 @@
+# npm_exec_supply_chain.rules — Guard npm commands with supply-chain risk.
+# Technology: npm | Capability: exec
+# Covers: npx without version pin, npm link, install from URL/VCS.
+
+rule ask-npx-unversioned {
+  enabled true
+  priority 80
+  severity warning
+  ASK execution
+  IF command REGEX "^npx\\s+[a-zA-Z@][^@\\s]*(\\s|$)"
+  MESSAGE "Running a package with npx without a pinned version always fetches the latest release. A compromised maintainer account or hijacked package could execute malicious code in your project."
+  PROMPT "Have you pinned the version? Prefer: npx <package>@<exact-version> — and verify the package checksum if sensitive."
+}
+
+rule ask-npm-link {
+  enabled true
+  priority 75
+  severity warning
+  ASK execution
+  IF command STARTS_WITH "npm link"
+  OR command REGEX "^npm link\\b"
+  MESSAGE "'npm link' symlinks a local package into node_modules, bypassing normal version resolution. A development build can silently be injected into a dependency tree that expects a published version."
+  PROMPT "Is this npm link intentional for local development only? Ensure the package is unlinked before deploying or committing a lockfile."
+}
+
+rule ask-npm-install-url {
+  enabled true
+  priority 85
+  severity warning
+  ASK execution
+  IF command REGEX "npm install.*(https?://|github:|gitlab:|bitbucket:)"
+  OR command REGEX "npm i .*(https?://|github:|gitlab:|bitbucket:)"
+  MESSAGE "Installing a package directly from a URL or VCS reference bypasses npm registry integrity verification. The source may be unaudited, mutable, or non-reproducible."
+  PROMPT "Is this URL a pinned, trusted commit reference? Consider publishing to the npm registry instead — registry packages include integrity hashes and are immutable."
+}

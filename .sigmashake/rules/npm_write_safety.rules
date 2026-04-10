@@ -1,0 +1,51 @@
+# npm_write_safety.rules — Enforce safe package.json authoring.
+# Technology: npm | Capability: write
+# Covers: version ranges, lockfile edits, lifecycle scripts, star versions.
+
+rule no-caret-or-tilde-deps {
+  enabled true
+  priority 85
+  severity error
+  DENY write
+  IF path EQUALS "package.json" AND content LINE_REGEX "\"(dependencies|devDependencies|peerDependencies)\"" AND content LINE_REGEX "\"[\\^~][0-9]"
+  OR path GLOB "**/package.json" AND content LINE_REGEX ": *\"[\\^~][0-9]"
+  MESSAGE "Caret (^) and tilde (~) version ranges are banned. Use exact version pins (e.g., \"1.2.3\") to ensure reproducible installs across all environments."
+}
+
+rule no-star-version {
+  enabled true
+  priority 95
+  severity error
+  DENY write
+  IF path EQUALS "package.json" AND content CONTAINS "\"*\""
+  OR path GLOB "**/package.json" AND content LINE_REGEX ": *\"\\*\""
+  MESSAGE "Wildcard version (*) in package.json resolves to whatever is latest at install time, making builds non-reproducible. Use an exact version."
+}
+
+rule no-edit-lockfile {
+  enabled true
+  priority 95
+  severity error
+  DENY write
+  IF path EQUALS "package-lock.json"
+  OR path EQUALS "yarn.lock"
+  OR path EQUALS "bun.lock"
+  OR path EQUALS "pnpm-lock.yaml"
+  OR path ENDS_WITH "/package-lock.json"
+  OR path ENDS_WITH "/yarn.lock"
+  OR path ENDS_WITH "/bun.lock"
+  OR path ENDS_WITH "/pnpm-lock.yaml"
+  MESSAGE "Lockfiles must not be hand-edited. They are machine-generated. Run 'npm install' (or yarn/bun/pnpm equivalent) to regenerate after changing package.json."
+}
+
+rule ask-postinstall-script {
+  enabled true
+  priority 80
+  severity warning
+  ASK write
+  IF path EQUALS "package.json" AND content CONTAINS "\"postinstall\""
+  OR path EQUALS "package.json" AND content CONTAINS "\"preinstall\""
+  OR path GLOB "**/package.json" AND content CONTAINS "\"postinstall\""
+  MESSAGE "Install lifecycle script detected. postinstall/preinstall scripts run automatically on 'npm install' in any project that depends on this package — a common supply-chain attack vector."
+  PROMPT "Is this lifecycle script necessary? If so, document clearly what it does. Consider whether it can be replaced with an explicit setup step."
+}
