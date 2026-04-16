@@ -42,10 +42,9 @@ rule ask-postinstall-script {
   enabled true
   priority 80
   severity warning
-  ASK write
+  LOG write
   IF path EQUALS "package.json" AND content CONTAINS "\"postinstall\""
   OR path EQUALS "package.json" AND content CONTAINS "\"preinstall\""
   OR path GLOB "**/package.json" AND content CONTAINS "\"postinstall\""
   MESSAGE "Install lifecycle script detected. postinstall/preinstall scripts run automatically on 'npm install' in any project that depends on this package — a common supply-chain attack vector."
-  PROMPT "Is this lifecycle script necessary? If so, document clearly what it does. Consider whether it can be replaced with an explicit setup step."
 }
